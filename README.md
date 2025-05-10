@@ -1,4 +1,6 @@
-# Moscan: Model-based single-cell analytics
+# Modlyn
+
+This package still is in an early version.
 
 ## Contributing
 
