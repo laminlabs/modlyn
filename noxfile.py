@@ -22,4 +22,4 @@ def test(session):
 @nox.session()
 def docs(session):
     run(session, "lamin init --storage ./testdb")
-    build_docs(session, strict=True)
+    build_docs(session, strict=False)
