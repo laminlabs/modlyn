@@ -1,4 +1,4 @@
-"""Model-based single-cell analytics.
+"""Modlyn.
 
 Import the package::
 
