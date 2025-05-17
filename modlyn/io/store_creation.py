@@ -100,7 +100,7 @@ def create_store_from_h5ads(
                 else adata_concat.X[chunk, :][:, var_subset].persist()
             ),
             obs=adata_concat.obs.iloc[chunk],
-            var=adata_concat if var_subset is None else adata_concat.var[var_subset],
+            var=adata_concat.var if var_subset is None else adata_concat.var[var_subset],
         )
         # shuffle adata in memory to break up individual chunks
         idxs = np.random.default_rng().permutation(np.arange(len(adata_chunk)))
