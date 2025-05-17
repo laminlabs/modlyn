@@ -23,6 +23,7 @@ Array store creation.
    create_store_from_h5ads
 
 """
-#from .datamodules import ClassificationDataModule
-#from .loading import ZarrDataset, read_lazy
+# from .datamodules import ClassificationDataModule
+# from .loading import ZarrDataset, read_lazy
+from .pure_zarr import ZarrArrayDataset
 from .store_creation import create_store_from_h5ads
