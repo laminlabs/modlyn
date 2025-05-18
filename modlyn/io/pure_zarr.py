@@ -55,7 +55,10 @@ class ZarrArrayDataset:
             array_idx = self.array_idxs[i]
             array = self.arrays[array_idx]
             tasks.append(array._async_array.getitem(self.chunk_slices[i]))
-        return await asyncio.gather(*tasks)
+        if len(tasks) == 1:
+            return tasks[0]
+        else:
+            return await asyncio.gather(*tasks)
 
     def __iter__(self):
         chunks = np.arange(len(self.chunks))
