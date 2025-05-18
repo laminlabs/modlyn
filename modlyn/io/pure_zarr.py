@@ -34,11 +34,16 @@ def batched(iterable, n):
 
 class ZarrArraysDataset:
     def __init__(
-        self, arrays: list[zarr.Array], shuffle: bool = True, preload_nchunks: int = 8
+        self,
+        arrays: list[zarr.Array],
+        shuffle: bool = True,
+        preload_nchunks: int = 8,
+        concat_preloaded: bool = True,
     ):
         self.arrays = arrays
         self.shuffle = shuffle
         self.preload_chunks = preload_nchunks
+        self.concat_preloaded = concat_preloaded
 
         self.n_obs_list: list[int] = []  # number of observations for each array
         self.chunks_lengths: list[int] = []  # chunk length for each array
@@ -125,11 +130,21 @@ class ZarrArraysDataset:
             np.random.shuffle(chunks_global)  # noqa: NPY002
 
         for batch in batched(chunks_global, self.preload_chunks):
-            for chunk_arr in zsync.sync(self.fetch_chunks(batch)):
+            # concat chunk arrays in the batch
+            if len(batch) > 1 and self.concat_preloaded:
+                batch_arr = zsync.sync(self.fetch_chunks_concat(batch))
                 if self.shuffle:
+                    # important
                     # use shuffle to avoid making a copy
-                    np.random.shuffle(chunk_arr)  # noqa: NPY002
-                yield chunk_arr
+                    np.random.shuffle(batch_arr)  # noqa: NPY002
+                yield batch_arr
+            else:
+                # just return chunk arrays from the batch one by one
+                for chunk_arr in zsync.sync(self.fetch_chunks(batch)):
+                    if self.shuffle:
+                        # use shuffle to avoid making a copy
+                        np.random.shuffle(chunk_arr)  # noqa: NPY002
+                    yield chunk_arr
 
     def __len__(self):
         return self.n_obs
