@@ -6,6 +6,7 @@ import numpy as np
 import zarr
 import zarr.core.sync as zsync
 from upath import UPath
+from zarr.core.array import BasicIndexer, default_buffer_prototype
 
 
 def shards_dir_to_arrays(path: PathLike) -> list[zarr.Array]:
@@ -51,6 +52,12 @@ class ZarrArraysDataset:
             arrays_chunks.append(np.arange(array_nchunks))
 
         self.n_obs = sum(self.n_obs_list)
+        # assumes the same for all arrays
+        array0 = arrays[0]
+        self.n_vars = array0.shape[1]
+        self.dtype = array0.dtype
+        self.order = array0.order
+
         self.chunks = np.hstack(arrays_chunks)
         self.array_idxs = np.repeat(np.arange(len(self.arrays)), arrays_nchunks)
         # pre-compute chunk slices
@@ -67,6 +74,39 @@ class ZarrArraysDataset:
         start = chunk_length * chunk_idx
         stop = min(chunk_length * (chunk_idx + 1), array_n_obs)
         return slice(start, stop)
+
+    # fast zero-copy concatenated chunks
+    async def fetch_chunks_concat(self, chunk_idxs: list[int]):
+        prototype = default_buffer_prototype()
+
+        local_slices = []
+        out_n_obs = 0
+        for idx in chunk_idxs:
+            chunk_slice = self.chunks_slices[idx]
+            chunk_length = chunk_slice.stop - chunk_slice.start
+            start = out_n_obs
+            out_n_obs += chunk_length
+            local_slices.append(slice(start, out_n_obs))
+
+        out = np.empty((out_n_obs, self.n_vars), dtype=self.dtype, order=self.order)
+        tasks = []
+        for i, idx in enumerate(chunk_idxs):
+            chunk_slice = self.chunks_slices[idx]
+            array_idx = self.array_idxs[idx]
+            array = self.arrays[array_idx]
+            indexer = BasicIndexer(
+                chunk_slice,
+                shape=array.metadata.shape,
+                chunk_grid=array.metadata.chunk_grid,
+            )
+            buffer = prototype.nd_buffer.from_numpy_array(out[local_slices[i]])
+            task = array._async_array._get_selection(
+                indexer, prototype=prototype, out=buffer
+            )
+            tasks.append(task)
+        await asyncio.gather(*tasks)
+
+        return out
 
     async def fetch_chunks(self, chunk_idxs: list[int]):
         tasks = []
