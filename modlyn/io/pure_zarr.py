@@ -14,7 +14,7 @@ def batched(iterable, n):
         yield batch
 
 
-class ZarrArrayDataset:
+class ZarrArraysDataset:
     def __init__(
         self, arrays: list[zarr.Array], shuffle: bool = True, preload_nchunks: int = 3
     ):
