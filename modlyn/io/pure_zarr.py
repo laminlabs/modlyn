@@ -104,6 +104,7 @@ class ZarrArraysDataset:
                 shape=array.metadata.shape,
                 chunk_grid=array.metadata.chunk_grid,
             )
+            # this can also be a gpu buffer
             buffer = prototype.nd_buffer.from_numpy_array(out[local_slices[i]])
             task = array._async_array._get_selection(
                 indexer, prototype=prototype, out=buffer
