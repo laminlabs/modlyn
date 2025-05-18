@@ -28,7 +28,7 @@ class ZarrArraysDataset:
         arrays_nchunks: list[int] = []  # number of chunks for each array
         for array in arrays:
             self.n_obs_list.append(array.shape[0])
-            self.chunks_lengths.append(array.chunk[0])
+            self.chunks_lengths.append(array.chunks[0])
             array_nchunks = array.nchunks
             arrays_nchunks.append(array_nchunks)
             arrays_chunks.append(np.arange(array_nchunks))
