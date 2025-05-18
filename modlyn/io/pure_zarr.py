@@ -55,7 +55,7 @@ class ZarrArraysDataset:
         self.array_idxs = np.repeat(np.arange(len(self.arrays)), arrays_nchunks)
         # pre-compute chunk slices
         # slices are needed because we want to iterate over (logical) chunks, not (physical) shards
-        # but in azrr array.blocks[i] returns whole shards unlike dask
+        # but in zarr array.blocks[i] returns whole shards unlike dask
         self.chunks_slices: list[slice] = []
         for i, chunk_idx in enumerate(self.chunks):
             self.chunks_slices.append(self._chunk_slice(chunk_idx, self.array_idxs[i]))
