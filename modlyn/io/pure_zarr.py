@@ -63,11 +63,11 @@ class ZarrArraysDataset:
             return await asyncio.gather(*tasks)
 
     def __iter__(self):
-        chunks = np.arange(len(self.chunks))
+        chunks_global = np.arange(len(self.chunks))
         if self.shuffle:
-            chunks = np.random.permutation(chunks)  # noqa: NPY002
+            chunks_global = np.random.permutation(chunks_global)  # noqa: NPY002
 
-        for batch in batched(chunks, self.preload_chunks):
+        for batch in batched(chunks_global, self.preload_chunks):
             for chunk_arr in zsync.sync(self.fetch_chunks(batch)):
                 yield np.random.permutation(chunk_arr) if self.shuffle else chunk_arr  # noqa: NPY002
 
