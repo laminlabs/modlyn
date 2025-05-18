@@ -82,11 +82,14 @@ class ZarrArraysDataset:
     def __iter__(self):
         chunks_global = np.arange(len(self.chunks))
         if self.shuffle:
-            chunks_global = np.random.permutation(chunks_global)  # noqa: NPY002
+            np.random.shuffle(chunks_global)  # noqa: NPY002
 
         for batch in batched(chunks_global, self.preload_chunks):
             for chunk_arr in zsync.sync(self.fetch_chunks(batch)):
-                yield np.random.permutation(chunk_arr) if self.shuffle else chunk_arr  # noqa: NPY002
+                if self.shuffle:
+                    # use shuffle to avoid making a copy
+                    np.random.shuffle(chunk_arr)  # noqa: NPY002
+                yield chunk_arr
 
     def __len__(self):
         return self.n_obs
