@@ -8,7 +8,7 @@ import zarr.core.sync as zsync
 from upath import UPath
 
 
-def shards_dir_to_list(path: PathLike) -> list[zarr.Array]:
+def shards_dir_to_arrays(path: PathLike) -> list[zarr.Array]:
     upath = UPath(path)
     arrays = []
     for p in upath.iterdir():
