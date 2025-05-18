@@ -58,7 +58,7 @@ class ZarrArraysDataset:
             array = self.arrays[array_idx]
             tasks.append(array._async_array.getitem(self.chunks_slices[i]))
         if len(tasks) == 1:
-            return tasks[0]
+            return await tasks[0]
         else:
             return await asyncio.gather(*tasks)
 
