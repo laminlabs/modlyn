@@ -1,9 +1,26 @@
 import asyncio
 from itertools import islice
+from os import PathLike
 
 import numpy as np
 import zarr
 import zarr.core.sync as zsync
+from upath import UPath
+
+
+def shards_dir_to_list(path: PathLike) -> list[zarr.Array]:
+    upath = UPath(path)
+    arrays = []
+    for p in upath.iterdir():
+        if p.suffix != ".zarr":
+            continue
+        p_x = p / "X"
+        if p_x.protocol == "":
+            store = p_x.as_posix()
+        else:
+            store = zarr.storage.FsspecStore.from_upath(UPath(p_x, asynchronous=True))
+        arrays.append(zarr.open(store, mode="r"))
+    return arrays
 
 
 def batched(iterable, n):
