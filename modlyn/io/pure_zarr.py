@@ -1,17 +1,43 @@
 import asyncio
+from collections.abc import Iterable
 from itertools import islice
 from os import PathLike
 
+import anndata as ad
 import numpy as np
+import pandas as pd
 import zarr
 import zarr.core.sync as zsync
+from torch.utils.data import IterableDataset
 from upath import UPath
-from zarr.core.array import BasicIndexer, default_buffer_prototype
 
 
-def shards_dir_to_arrays(path: PathLike) -> list[zarr.Array]:
+def _encode_str_to_int(obs_list: list[pd.DataFrame]):
+    """Encodes string and categorical columns in a list of DataFrames to integer codes, modifying the DataFrames in place.
+
+    Args:
+        obs_list (list[pd.DataFrame]): A list of pandas DataFrames containing the data to encode.
+
+    Returns:
+        dict: A mapping of column names to dictionaries, where each dictionary maps integer codes
+              to their corresponding unique string or category values.
+    """
+    categorical_mapping = {}
+    for col in obs_list[0].select_dtypes(include=["object", "category"]).columns:
+        uniques = set().union(*(df[col].unique() for df in obs_list))
+        for df in obs_list:
+            df[col] = pd.Categorical(
+                df[col], categories=uniques, ordered=True
+            ).codes.astype("i8")
+        categorical_mapping[col] = dict(enumerate(uniques))
+    return categorical_mapping
+
+
+def load_store(
+    path: PathLike, obs_columns: Iterable[str] = None
+) -> tuple[list[zarr.Array], list[pd.DataFrame], dict[str, dict[int, str]]]:
     upath = UPath(path)
-    arrays = []
+    arrays, obs_dfs = [], []
     for p in upath.iterdir():
         if p.suffix != ".zarr":
             continue
@@ -21,10 +47,22 @@ def shards_dir_to_arrays(path: PathLike) -> list[zarr.Array]:
         else:
             store = zarr.storage.FsspecStore.from_upath(UPath(p_x, asynchronous=True))
         arrays.append(zarr.open(store, mode="r"))
-    return arrays
+
+        g = zarr.open(p, mode="r")
+        if obs_columns is None:
+            obs = ad.io.read_elem(g["obs"])
+        else:
+            obs = pd.DataFrame(
+                {col: ad.io.read_elem(g[f"obs/{col}"]) for col in obs_columns}
+            )
+        obs_dfs.append(obs)
+
+    categorical_mapping = _encode_str_to_int(obs_dfs)
+
+    return arrays, obs_dfs, categorical_mapping
 
 
-def batched(iterable, n):
+def _batched(iterable, n):
     if n < 1:
         raise ValueError("n must be >= 1")
     it = iter(iterable)
@@ -32,24 +70,51 @@ def batched(iterable, n):
         yield batch
 
 
-class ZarrArraysDataset:
+def _sample_rows(
+    x_list: list[np.ndarray], obs_list: list[np.ndarray], shuffle: bool = True
+):
+    """Samples rows from multiple arrays and their corresponding observation arrays.
+
+    Args:
+        x_list (list[np.ndarray]): A list of numpy arrays containing the data to sample from.
+        obs_list (list[np.ndarray]): A list of numpy arrays containing the corresponding observations.
+        shuffle (bool): Whether to shuffle the rows before sampling. Defaults to True.
+
+    Yields:
+        tuple: A tuple containing a row from `x_list` and the corresponding row from `obs_list`.
+    """
+    lengths = np.fromiter((x.shape[0] for x in x_list), dtype=int)
+    cum = np.concatenate(([0], np.cumsum(lengths)))
+    total = cum[-1]
+    idxs = np.arange(total)
+    if shuffle:
+        np.random.default_rng().shuffle(idxs)
+    arr_idxs = np.searchsorted(cum, idxs, side="right") - 1
+    row_idxs = idxs - cum[arr_idxs]
+    for ai, ri in zip(arr_idxs, row_idxs):
+        yield x_list[ai][ri], obs_list[ai][ri]
+
+
+class ZarrArraysDataset(IterableDataset):
     def __init__(
         self,
-        arrays: list[zarr.Array],
+        x_list: list[zarr.Array],
+        obs_list: list[pd.DataFrame],
+        obs_column: str,
         shuffle: bool = True,
         preload_nchunks: int = 8,
-        concat_preloaded: bool = True,
     ):
-        self.arrays = arrays
+        self.arrays = x_list
+        self.obs = obs_list
+        self.obs_column = obs_column
         self.shuffle = shuffle
         self.preload_chunks = preload_nchunks
-        self.concat_preloaded = concat_preloaded
 
         self.n_obs_list: list[int] = []  # number of observations for each array
         self.chunks_lengths: list[int] = []  # chunk length for each array
         arrays_chunks: list[list[int]] = []  # list of chunk indices for each array
         arrays_nchunks: list[int] = []  # number of chunks for each array
-        for array in arrays:
+        for array in x_list:
             self.n_obs_list.append(array.shape[0])
             self.chunks_lengths.append(array.chunks[0])
             array_nchunks = array.nchunks
@@ -58,7 +123,7 @@ class ZarrArraysDataset:
 
         self.n_obs = sum(self.n_obs_list)
         # assumes the same for all arrays
-        array0 = arrays[0]
+        array0 = x_list[0]
         self.n_vars = array0.shape[1]
         self.dtype = array0.dtype
         self.order = array0.order
@@ -75,77 +140,40 @@ class ZarrArraysDataset:
     def _chunk_slice(self, chunk_idx: int, array_idx: int):
         chunk_length = self.chunks_lengths[array_idx]
         array_n_obs = self.n_obs_list[array_idx]
-
         start = chunk_length * chunk_idx
         stop = min(chunk_length * (chunk_idx + 1), array_n_obs)
         return slice(start, stop)
 
-    # fast zero-copy concatenated chunks
-    async def fetch_chunks_concat(self, chunk_idxs: list[int]):
-        prototype = default_buffer_prototype()
-
-        local_slices = []
-        out_n_obs = 0
-        for idx in chunk_idxs:
-            chunk_slice = self.chunks_slices[idx]
-            chunk_length = chunk_slice.stop - chunk_slice.start
-            start = out_n_obs
-            out_n_obs += chunk_length
-            local_slices.append(slice(start, out_n_obs))
-
-        out = np.empty((out_n_obs, self.n_vars), dtype=self.dtype, order=self.order)
-        tasks = []
-        for i, idx in enumerate(chunk_idxs):
-            chunk_slice = self.chunks_slices[idx]
-            array_idx = self.array_idxs[idx]
-            array = self.arrays[array_idx]
-            indexer = BasicIndexer(
-                chunk_slice,
-                shape=array.metadata.shape,
-                chunk_grid=array.metadata.chunk_grid,
-            )
-            # this can also be a gpu buffer
-            buffer = prototype.nd_buffer.from_numpy_array(out[local_slices[i]])
-            task = array._async_array._get_selection(
-                indexer, prototype=prototype, out=buffer
-            )
-            tasks.append(task)
-        await asyncio.gather(*tasks)
-
-        return out
-
-    async def fetch_chunks(self, chunk_idxs: list[int]):
+    async def _fetch_chunks_x(self, chunk_idxs: list[int]):
         tasks = []
         for i in chunk_idxs:
             array_idx = self.array_idxs[i]
             array = self.arrays[array_idx]
             tasks.append(array._async_array.getitem(self.chunks_slices[i]))
-        if len(tasks) == 1:
-            return await tasks[0]
-        else:
-            return await asyncio.gather(*tasks)
+        return await asyncio.gather(*tasks)
+
+    def _fetch_chunks_obs(self, chunk_idxs: list[int]):
+        obs = []
+        for i in chunk_idxs:
+            array_idx = self.array_idxs[i]
+            obs.append(
+                self.obs[array_idx][self.obs_column]
+                .iloc[self.chunks_slices[i]]
+                .to_numpy()
+            )
+        return obs
 
     def __iter__(self):
         chunks_global = np.arange(len(self.chunks))
         if self.shuffle:
             np.random.shuffle(chunks_global)  # noqa: NPY002
 
-        for batch in batched(chunks_global, self.preload_chunks):
-            # concat chunk arrays in the batch
-            if len(batch) > 1 and self.concat_preloaded:
-                batch_arr = zsync.sync(self.fetch_chunks_concat(batch))
-                if self.shuffle:
-                    # important
-                    # use shuffle to avoid making a copy
-                    np.random.shuffle(batch_arr)  # noqa: NPY002
-                yield batch_arr
-            else:
-                # just return chunk arrays from the batch one by one
-                for chunk_arr in zsync.sync(self.fetch_chunks(batch)):
-                    if self.shuffle:
-                        # use shuffle to avoid making a copy
-                        np.random.shuffle(chunk_arr)  # noqa: NPY002
-                    yield chunk_arr
+        for batch in _batched(chunks_global, self.preload_chunks):
+            yield from _sample_rows(
+                list(zsync.sync(self._fetch_chunks_x(batch))),
+                self._fetch_chunks_obs(batch),
+                self.shuffle,
+            )
 
     def __len__(self):
         return self.n_obs
