@@ -6,6 +6,6 @@
 :maxdepth: 1
 :hidden:
 
-reference
-changelog
+guide
+api
 ```
