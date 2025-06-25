@@ -120,7 +120,9 @@ ignore = [
     # subprocess` call: check for execution of untrusted input - https://github.com/PyCQA/bandit/issues/333
     "S603",
     # Starting a process with a partial executable path
-    "S607"
+    "S607",
+    # Numpy deprecated patterns (remove again)
+    "NPY002"
 ]
 
 [tool.ruff.pydocstyle]
