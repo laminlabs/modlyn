@@ -22,4 +22,5 @@ def test(session):
 
 @nox.session()
 def docs(session):
+    run(session, "lamin init")
     build_docs(session, strict=False)
