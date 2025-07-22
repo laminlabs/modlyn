@@ -10,7 +10,8 @@ readme = "README.md"
 dynamic = ["version", "description"]
 dependencies = [
     "anndata>=0.12.0rc1",
-    "zarr>=3",
+    "scikit-learn",
+    "matplotlib",
     "lightning"
 ]
 
@@ -19,7 +20,8 @@ Home = "https://github.com/laminlabs/modlyn"
 
 [project.optional-dependencies]
 dev = [
-    "lamindb",
+    "lamindb[jupyter]",
+    "seaborn",
     "pre-commit",
     "nox",
     "pytest>=6.0",

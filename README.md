@@ -1,9 +1,6 @@
-# Modlyn
+# Modlyn: feature selection for large count matrices
 
-This package still is in an early version. To use it, see:
-
-- [Training example](https://lamin.ai/laminlabs/arrayloader-benchmarks/transform/UMQFXo0vs0Z6)
-- [Benchmark](https://lamin.ai/laminlabs/arrayloader-benchmarks/transform/2C0ghWpz0auc)
+Read the [quickstart](https://modlyn.lamin.ai/quickstart).
 
 ## Contributing
 
