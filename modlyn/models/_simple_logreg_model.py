@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import lightning as L
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn.functional as F
+from sklearn.metrics import classification_report, f1_score
+from sklearn.preprocessing import LabelEncoder
 from torchmetrics import Accuracy, F1Score, MetricCollection
 
 
@@ -108,3 +111,55 @@ class SimpleLogReg(L.LightningModule):
             print(f"Final training loss: {self.train_losses[-1]:.4f}")
         if self.val_losses:
             print(f"Final validation loss: {self.val_losses[-1]:.4f}")
+
+    def plot_classification_report(self, adata):
+        # Get predictions on training data
+        self.eval()
+        X = adata.X.toarray() if hasattr(adata.X, "toarray") else adata.X
+        X_tensor = torch.FloatTensor(X)
+        with torch.no_grad():
+            logits = self(X_tensor)
+            y_pred = torch.argmax(logits, dim=1).numpy()
+
+        # Prepare true labels
+        le = LabelEncoder()
+        y_encoded = le.fit_transform(adata.obs["cell_line"])
+
+        # Overall F1
+        f1 = f1_score(y_encoded, y_pred, average="weighted")
+
+        print(f"Weighted F1: {f1:.3f}")
+
+        # Get per-class metrics
+        report = classification_report(
+            y_encoded, y_pred, target_names=le.classes_, output_dict=True
+        )
+        class_recalls = [report[class_name]["recall"] for class_name in le.classes_]
+        class_precisions = [
+            report[class_name]["precision"] for class_name in le.classes_
+        ]
+        class_f1s = [report[class_name]["f1-score"] for class_name in le.classes_]
+
+        # Random baseline
+        n_classes = len(le.classes_)
+        random_baseline = [1 / n_classes] * n_classes
+
+        # Performance metrics plot
+        x = np.arange(len(le.classes_))
+        width = 0.2
+
+        plt.figure(figsize=(12, 6))
+        plt.bar(x - 1.5 * width, class_recalls, width, label="Recall", alpha=0.8)
+        plt.bar(x - 0.5 * width, class_precisions, width, label="Precision", alpha=0.8)
+        plt.bar(x + 0.5 * width, class_f1s, width, label="F1 Score", alpha=0.8)
+        plt.bar(
+            x + 1.5 * width, random_baseline, width, label="Random Baseline", alpha=0.8
+        )
+
+        plt.xlabel("Cell Line")
+        plt.ylabel("Score")
+        plt.title("Performance by Cell Line")
+        plt.xticks(x, le.classes_, rotation=45)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
