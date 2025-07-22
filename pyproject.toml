@@ -20,7 +20,7 @@ Home = "https://github.com/laminlabs/modlyn"
 
 [project.optional-dependencies]
 dev = [
-    "lamindb",
+    "lamindb[jupyter]",
     "seaborn",
     "pre-commit",
     "nox",
