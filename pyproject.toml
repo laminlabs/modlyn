@@ -10,6 +10,8 @@ readme = "README.md"
 dynamic = ["version", "description"]
 dependencies = [
     "anndata>=0.12.0rc1",
+    "scikit-learn",
+    "matplotlib",
     "lightning"
 ]
 
