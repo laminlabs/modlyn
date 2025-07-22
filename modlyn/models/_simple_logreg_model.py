@@ -28,9 +28,11 @@ class SimpleLogReg(L.LightningModule):
         self.train_metrics = metrics.clone(prefix="train_")
         self.val_metrics = metrics.clone(prefix="val_")
 
-        # Add loss tracking
+        # Add batch-level loss tracking
         self.train_losses: list[float] = []
         self.val_losses: list[float] = []
+        self.train_steps: list[int] = []  # Track global steps for plotting
+        self.val_steps: list[int] = []
 
     def forward(self, inputs):
         return self.linear(inputs)
@@ -40,15 +42,17 @@ class SimpleLogReg(L.LightningModule):
         logits = self.forward(x)
         preds = torch.argmax(logits, dim=1)
         loss = F.cross_entropy(logits, targets)
+
+        # Store batch-level loss
+        self.train_losses.append(loss.item())
+        self.train_steps.append(self.global_step)
+
         self.log("train_loss", loss)
         metrics = self.train_metrics(preds, targets)
         self.log_dict(metrics)
         return loss
 
     def on_train_epoch_end(self) -> None:
-        # Store the epoch loss
-        if "train_loss" in self.trainer.callback_metrics:
-            self.train_losses.append(self.trainer.callback_metrics["train_loss"].item())
         self.train_metrics.reset()
 
     def validation_step(self, batch, batch_idx):
@@ -56,14 +60,16 @@ class SimpleLogReg(L.LightningModule):
         logits = self.forward(x)
         preds = torch.argmax(logits, dim=1)
         loss = F.cross_entropy(logits, targets)
+
+        # Store batch-level validation loss
+        self.val_losses.append(loss.item())
+        self.val_steps.append(self.global_step)
+
         self.log("val_loss", loss)
         metrics = self.val_metrics(preds, targets)
         self.log_dict(metrics)
 
     def on_validation_epoch_end(self) -> None:
-        # Store the epoch loss
-        if "val_loss" in self.trainer.callback_metrics:
-            self.val_losses.append(self.trainer.callback_metrics["val_loss"].item())
         self.val_metrics.reset()
 
     def configure_optimizers(self):
