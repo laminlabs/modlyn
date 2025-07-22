@@ -91,16 +91,6 @@ class SimpleLogReg(L.LightningModule):
             axes[0].set_ylabel("Training Loss")
             axes[0].set_title("Training Loss Over Steps (Batch Level)")
             axes[0].grid(True, alpha=0.3)
-        else:
-            axes[0].text(
-                0.5,
-                0.5,
-                "No training loss data available",
-                transform=axes[0].transAxes,
-                ha="center",
-                va="center",
-            )
-            axes[0].set_title("Training Loss - No Data")
 
         # Validation loss per batch
         if self.val_losses and self.val_steps:
@@ -109,16 +99,6 @@ class SimpleLogReg(L.LightningModule):
             axes[1].set_ylabel("Validation Loss")
             axes[1].set_title("Validation Loss Over Steps (Batch Level)")
             axes[1].grid(True, alpha=0.3)
-        else:
-            axes[1].text(
-                0.5,
-                0.5,
-                "No validation loss data available",
-                transform=axes[1].transAxes,
-                ha="center",
-                va="center",
-            )
-            axes[1].set_title("Validation Loss - No Data")
 
         plt.tight_layout()
         plt.show()
