@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import lightning as L
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,6 +10,11 @@ import torch.nn.functional as F
 from sklearn.metrics import classification_report, f1_score
 from sklearn.preprocessing import LabelEncoder
 from torchmetrics import Accuracy, F1Score, MetricCollection
+
+from ._simple_logreg_datamodule import SimpleLogRegDataModule
+
+if TYPE_CHECKING:
+    import anndata as ad
 
 
 class SimpleLogReg(L.LightningModule):
@@ -37,6 +44,9 @@ class SimpleLogReg(L.LightningModule):
         self.val_losses: list[float] = []
         self.train_steps: list[int] = []  # Track global steps for plotting
         self.val_steps: list[int] = []
+
+        self.datamodule: SimpleLogRegDataModule | None = None
+        self.trainer: L.Trainer | None = None
 
     def forward(self, inputs):
         return self.linear(inputs)
@@ -80,6 +90,33 @@ class SimpleLogReg(L.LightningModule):
         return torch.optim.Adam(
             self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
+
+    def fit(
+        self,
+        adata_train: ad.AnnData | None,
+        adata_val: ad.AnnData | None,
+        label_column: str,
+        train_dataloader_kwargs=None,
+        val_dataloader_kwargs=None,
+        max_epochs: int = 4,
+        log_every_n_steps: int = 1,
+        num_sanity_val_steps: int = 0,
+        max_steps: int = 3000,
+    ):
+        self.datamodule = SimpleLogRegDataModule(
+            adata_train=adata_train,
+            adata_val=adata_val,
+            label_column=label_column,
+            train_dataloader_kwargs=train_dataloader_kwargs,
+            val_dataloader_kwargs=val_dataloader_kwargs,
+        )
+        self.trainer = L.Trainer(
+            max_epochs=max_epochs,
+            log_every_n_steps=log_every_n_steps,
+            num_sanity_val_steps=num_sanity_val_steps,
+            max_steps=max_steps,
+        )
+        self.trainer.fit(model=self, datamodule=self.datamodule)
 
     def plot_losses(self, figsize=(15, 6)):
         """Plot training and validation losses over training steps."""
@@ -159,7 +196,7 @@ class SimpleLogReg(L.LightningModule):
         plt.xlabel("Cell Line")
         plt.ylabel("Score")
         plt.title("Performance by Cell Line")
-        plt.xticks(x, le.classes_, rotation=45)
+        plt.xticks(x, le.classes_, rotation=90)
         plt.legend()
         plt.tight_layout()
         plt.show()
