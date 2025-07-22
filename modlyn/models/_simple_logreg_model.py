@@ -18,16 +18,29 @@ if TYPE_CHECKING:
 
 
 class SimpleLogReg(L.LightningModule):
+    """A simple LightningModule for classification tasks using a linear layer.
+
+    Args:
+        adata: An `AnnData` to infer dimensions from.
+        label_column: Name of the column in `obs` that contains the target values.
+        learning_rate: Learning rate for the optimizer.
+        weight_decay: Weight decay for the optimizer.
+
+    """
+
     def __init__(
         self,
-        n_genes: int,
-        n_classes: int,
+        adata: ad.AnnData,
+        label_column: str,
         learning_rate: float = 1e-3,
         weight_decay: float = 1e-4,
     ):
         super().__init__()
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+        n_genes = adata.n_vars
+        n_classes = adata.obs[label_column].nunique()
+        self.label_column = label_column
         self.linear = torch.nn.Linear(n_genes, n_classes)
 
         metrics = MetricCollection(
@@ -95,7 +108,6 @@ class SimpleLogReg(L.LightningModule):
         self,
         adata_train: ad.AnnData | None,
         adata_val: ad.AnnData | None,
-        label_column: str,
         train_dataloader_kwargs=None,
         val_dataloader_kwargs=None,
         max_epochs: int = 4,
@@ -103,10 +115,23 @@ class SimpleLogReg(L.LightningModule):
         num_sanity_val_steps: int = 0,
         max_steps: int = 3000,
     ):
+        """Fit the model using a SimpleLogRegDataModule.
+
+        Args:
+            adata_train: `AnnData` object containing the training data.
+            adata_val: `AnnData` object containing the validation data.
+            train_dataloader_kwargs: Additional keyword arguments passed to the torch DataLoader for the training dataset.
+            val_dataloader_kwargs: Additional keyword arguments passed to the torch DataLoader for the validation dataset.
+            max_epochs: Maximum number of epochs to train.
+            log_every_n_steps: Log training metrics every n steps.
+            num_sanity_val_steps: Number of sanity validation steps to run before training.
+            max_steps: Maximum number of training steps.
+
+        """
         self.datamodule = SimpleLogRegDataModule(
             adata_train=adata_train,
             adata_val=adata_val,
-            label_column=label_column,
+            label_column=self.label_column,
             train_dataloader_kwargs=train_dataloader_kwargs,
             val_dataloader_kwargs=val_dataloader_kwargs,
         )
