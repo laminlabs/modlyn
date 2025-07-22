@@ -3,7 +3,9 @@
 .. autosummary::
    :toctree: .
 
-   LogReg
+   SimpleLogReg
+   SimpleLogRegDataModule
 
 """
-from .linear import LogReg
+from ._simple_logreg_datamodule import SimpleLogRegDataModule
+from ._simple_logreg_model import SimpleLogReg

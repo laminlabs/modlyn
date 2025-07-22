@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torchmetrics import Accuracy, F1Score, MetricCollection
 
 
-class LogReg(L.LightningModule):
+class SimpleLogReg(L.LightningModule):
     def __init__(
         self,
         n_genes: int,
