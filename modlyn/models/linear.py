@@ -6,16 +6,16 @@ import torch.nn.functional as F
 from torchmetrics import Accuracy, F1Score, MetricCollection
 
 
-class Linear(L.LightningModule):
-    def __init__(self, n_genes: int, n_covariates: int, learning_rate: float = 1e-3):
+class LogReg(L.LightningModule):
+    def __init__(self, n_genes: int, n_classes: int, learning_rate: float = 1e-3):
         super().__init__()
         self.learning_rate = learning_rate
-        self.linear = torch.nn.Linear(n_genes, n_covariates)
+        self.linear = torch.nn.Linear(n_genes, n_classes)
 
         metrics = MetricCollection(
             [
-                F1Score(num_classes=n_covariates, average="macro", task="multiclass"),
-                Accuracy(num_classes=n_covariates, task="multiclass"),
+                F1Score(num_classes=n_classes, average="macro", task="multiclass"),
+                Accuracy(num_classes=n_classes, task="multiclass"),
             ]
         )
         self.train_metrics = metrics.clone(prefix="train_")

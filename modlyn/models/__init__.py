@@ -3,7 +3,7 @@
 .. autosummary::
    :toctree: .
 
-   Linear
+   LogReg
 
 """
-from .linear import Linear
+from .linear import LogReg
