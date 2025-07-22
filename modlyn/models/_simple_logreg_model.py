@@ -105,7 +105,7 @@ class SimpleLogReg(L.LightningModule):
         # Validation loss per batch
         if self.val_losses and self.val_steps:
             axes[1].plot(self.val_steps, self.val_losses, "r-", linewidth=1, alpha=0.7)
-            axes[1].set_xlabel("Training Steps")
+            axes[1].set_xlabel("Validation Steps")
             axes[1].set_ylabel("Validation Loss")
             axes[1].set_title("Validation Loss Over Steps (Batch Level)")
             axes[1].grid(True, alpha=0.3)
@@ -125,8 +125,6 @@ class SimpleLogReg(L.LightningModule):
 
         # Print summary statistics
         if self.train_losses:
-            print(f"Total training batches: {len(self.train_losses)}")
             print(f"Final training loss: {self.train_losses[-1]:.4f}")
         if self.val_losses:
-            print(f"Total validation batches: {len(self.val_losses)}")
             print(f"Final validation loss: {self.val_losses[-1]:.4f}")
