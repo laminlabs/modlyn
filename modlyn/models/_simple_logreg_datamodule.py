@@ -11,6 +11,21 @@ if TYPE_CHECKING:
     import anndata as ad
 
 
+class LossTracker(L.Callback):
+    def __init__(self):
+        super().__init__()
+        self.train_losses = []
+        self.val_losses = []
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        loss = trainer.callback_metrics["train_loss"]
+        self.train_losses.append(loss.item())
+
+    def on_validation_epoch_end(self, trainer, pl_module):
+        loss = trainer.callback_metrics["val_loss"]
+        self.val_losses.append(loss.item())
+
+
 class SimpleLogRegDataModule(L.LightningDataModule):
     """A simple LightningDataModule for classification tasks using TensorDataset.
 
