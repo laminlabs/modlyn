@@ -28,6 +28,10 @@ class SimpleLogReg(L.LightningModule):
         self.train_metrics = metrics.clone(prefix="train_")
         self.val_metrics = metrics.clone(prefix="val_")
 
+        # Add loss tracking
+        self.train_losses: list[float] = []
+        self.val_losses: list[float] = []
+
     def forward(self, inputs):
         return self.linear(inputs)
 
@@ -37,11 +41,14 @@ class SimpleLogReg(L.LightningModule):
         preds = torch.argmax(logits, dim=1)
         loss = F.cross_entropy(logits, targets)
         self.log("train_loss", loss)
-        metrics = self.train_metrics(preds, targets)  # Fixed order
+        metrics = self.train_metrics(preds, targets)
         self.log_dict(metrics)
         return loss
 
     def on_train_epoch_end(self) -> None:
+        # Store the epoch loss
+        if "train_loss" in self.trainer.callback_metrics:
+            self.train_losses.append(self.trainer.callback_metrics["train_loss"].item())
         self.train_metrics.reset()
 
     def validation_step(self, batch, batch_idx):
@@ -50,10 +57,13 @@ class SimpleLogReg(L.LightningModule):
         preds = torch.argmax(logits, dim=1)
         loss = F.cross_entropy(logits, targets)
         self.log("val_loss", loss)
-        metrics = self.val_metrics(preds, targets)  # Fixed order
+        metrics = self.val_metrics(preds, targets)
         self.log_dict(metrics)
 
-    def on_validation_epoch_end(self) -> None:  # Added missing reset
+    def on_validation_epoch_end(self) -> None:
+        # Store the epoch loss
+        if "val_loss" in self.trainer.callback_metrics:
+            self.val_losses.append(self.trainer.callback_metrics["val_loss"].item())
         self.val_metrics.reset()
 
     def configure_optimizers(self):
