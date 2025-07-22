@@ -185,7 +185,7 @@ class SimpleLogReg(L.LightningModule):
 
         # Prepare true labels
         le = LabelEncoder()
-        y_encoded = le.fit_transform(adata.obs["cell_line"])
+        y_encoded = le.fit_transform(adata.obs[self.label_column])
 
         # Overall F1
         f1 = f1_score(y_encoded, y_pred, average="weighted")
@@ -218,9 +218,9 @@ class SimpleLogReg(L.LightningModule):
             x + 1.5 * width, random_baseline, width, label="Random Baseline", alpha=0.8
         )
 
-        plt.xlabel("Cell Line")
+        plt.xlabel(self.label_column)
         plt.ylabel("Score")
-        plt.title("Performance by Cell Line")
+        plt.title(f"Performance by {self.label_column}")
         plt.xticks(x, le.classes_, rotation=90)
         plt.legend()
         plt.tight_layout()
