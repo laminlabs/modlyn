@@ -7,9 +7,16 @@ from torchmetrics import Accuracy, F1Score, MetricCollection
 
 
 class LogReg(L.LightningModule):
-    def __init__(self, n_genes: int, n_classes: int, learning_rate: float = 1e-3):
+    def __init__(
+        self,
+        n_genes: int,
+        n_classes: int,
+        learning_rate: float = 1e-3,
+        weight_decay: float = 1e-4,
+    ):
         super().__init__()
         self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
         self.linear = torch.nn.Linear(n_genes, n_classes)
 
         metrics = MetricCollection(
@@ -30,9 +37,8 @@ class LogReg(L.LightningModule):
         preds = torch.argmax(logits, dim=1)
         loss = F.cross_entropy(logits, targets)
         self.log("train_loss", loss)
-        metrics = self.train_metrics(targets, preds)
+        metrics = self.train_metrics(preds, targets)  # Fixed order
         self.log_dict(metrics)
-
         return loss
 
     def on_train_epoch_end(self) -> None:
@@ -44,8 +50,13 @@ class LogReg(L.LightningModule):
         preds = torch.argmax(logits, dim=1)
         loss = F.cross_entropy(logits, targets)
         self.log("val_loss", loss)
-        metrics = self.val_metrics(targets, preds)
+        metrics = self.val_metrics(preds, targets)  # Fixed order
         self.log_dict(metrics)
 
+    def on_validation_epoch_end(self) -> None:  # Added missing reset
+        self.val_metrics.reset()
+
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+        return torch.optim.Adam(
+            self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+        )
