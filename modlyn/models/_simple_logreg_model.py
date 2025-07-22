@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import lightning as L
+import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 from torchmetrics import Accuracy, F1Score, MetricCollection
@@ -76,3 +77,56 @@ class SimpleLogReg(L.LightningModule):
         return torch.optim.Adam(
             self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
+
+    def plot_losses(self, figsize=(15, 6)):
+        """Plot training and validation losses over training steps."""
+        fig, axes = plt.subplots(1, 2, figsize=figsize)
+
+        # Training loss per batch
+        if self.train_losses and self.train_steps:
+            axes[0].plot(
+                self.train_steps, self.train_losses, "b-", linewidth=1, alpha=0.7
+            )
+            axes[0].set_xlabel("Training Steps")
+            axes[0].set_ylabel("Training Loss")
+            axes[0].set_title("Training Loss Over Steps (Batch Level)")
+            axes[0].grid(True, alpha=0.3)
+        else:
+            axes[0].text(
+                0.5,
+                0.5,
+                "No training loss data available",
+                transform=axes[0].transAxes,
+                ha="center",
+                va="center",
+            )
+            axes[0].set_title("Training Loss - No Data")
+
+        # Validation loss per batch
+        if self.val_losses and self.val_steps:
+            axes[1].plot(self.val_steps, self.val_losses, "r-", linewidth=1, alpha=0.7)
+            axes[1].set_xlabel("Training Steps")
+            axes[1].set_ylabel("Validation Loss")
+            axes[1].set_title("Validation Loss Over Steps (Batch Level)")
+            axes[1].grid(True, alpha=0.3)
+        else:
+            axes[1].text(
+                0.5,
+                0.5,
+                "No validation loss data available",
+                transform=axes[1].transAxes,
+                ha="center",
+                va="center",
+            )
+            axes[1].set_title("Validation Loss - No Data")
+
+        plt.tight_layout()
+        plt.show()
+
+        # Print summary statistics
+        if self.train_losses:
+            print(f"Total training batches: {len(self.train_losses)}")
+            print(f"Final training loss: {self.train_losses[-1]:.4f}")
+        if self.val_losses:
+            print(f"Total validation batches: {len(self.val_losses)}")
+            print(f"Final validation loss: {self.val_losses[-1]:.4f}")
