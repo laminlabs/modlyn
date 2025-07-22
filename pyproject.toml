@@ -19,6 +19,7 @@ Home = "https://github.com/laminlabs/modlyn"
 [project.optional-dependencies]
 dev = [
     "lamindb",
+    "seaborn",
     "pre-commit",
     "nox",
     "pytest>=6.0",
