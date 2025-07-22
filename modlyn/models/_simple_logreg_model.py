@@ -1,0 +1,72 @@
+from __future__ import annotations
+
+import lightning as L
+import torch
+import torch.nn.functional as F
+from torchmetrics import Accuracy, F1Score, MetricCollection
+
+
+class SimpleLogReg(L.LightningModule):
+    def __init__(
+        self,
+        n_genes: int,
+        n_classes: int,
+        learning_rate: float = 1e-3,
+        weight_decay: float = 1e-4,
+    ):
+        super().__init__()
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.linear = torch.nn.Linear(n_genes, n_classes)
+
+        metrics = MetricCollection(
+            [
+                F1Score(num_classes=n_classes, average="macro", task="multiclass"),
+                Accuracy(num_classes=n_classes, task="multiclass"),
+            ]
+        )
+        self.train_metrics = metrics.clone(prefix="train_")
+        self.val_metrics = metrics.clone(prefix="val_")
+
+        # Add loss tracking
+        self.train_losses: list[float] = []
+        self.val_losses: list[float] = []
+
+    def forward(self, inputs):
+        return self.linear(inputs)
+
+    def training_step(self, batch, batch_idx):
+        x, targets = batch
+        logits = self.forward(x)
+        preds = torch.argmax(logits, dim=1)
+        loss = F.cross_entropy(logits, targets)
+        self.log("train_loss", loss)
+        metrics = self.train_metrics(preds, targets)
+        self.log_dict(metrics)
+        return loss
+
+    def on_train_epoch_end(self) -> None:
+        # Store the epoch loss
+        if "train_loss" in self.trainer.callback_metrics:
+            self.train_losses.append(self.trainer.callback_metrics["train_loss"].item())
+        self.train_metrics.reset()
+
+    def validation_step(self, batch, batch_idx):
+        x, targets = batch
+        logits = self.forward(x)
+        preds = torch.argmax(logits, dim=1)
+        loss = F.cross_entropy(logits, targets)
+        self.log("val_loss", loss)
+        metrics = self.val_metrics(preds, targets)
+        self.log_dict(metrics)
+
+    def on_validation_epoch_end(self) -> None:
+        # Store the epoch loss
+        if "val_loss" in self.trainer.callback_metrics:
+            self.val_losses.append(self.trainer.callback_metrics["val_loss"].item())
+        self.val_metrics.reset()
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(
+            self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+        )
