@@ -1,4 +1,4 @@
-# Modlyn: feature selection for large count matrices
+# Modlyn: Feature selection for large count matrices
 
 Read the [quickstart](https://modlyn.lamin.ai/quickstart).
 
