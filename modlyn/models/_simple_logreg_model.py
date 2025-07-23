@@ -33,7 +33,9 @@ class SimpleLogReg(L.LightningModule):
         adata: ad.AnnData,
         label_column: str,
         learning_rate: float = 1e-2,
-        weight_decay: float = 1e-2,  # calibrated by comparing to sklearn: https://lamin.ai/laminlabs/arrayloader-benchmarks/transform/BhlpqNRWn3G00003
+        # weight decay calibrated by comparing to sklearn
+        # https://lamin.ai/laminlabs/arrayloader-benchmarks/transform/BhlpqNRWn3G00003
+        weight_decay: float = 1e-2,
     ):
         super().__init__()
         self.learning_rate = learning_rate
