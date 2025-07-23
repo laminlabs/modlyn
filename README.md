@@ -1,6 +1,9 @@
 # Modlyn: Feature selection for large count matrices
 
-Read the [quickstart](https://modlyn.lamin.ai/quickstart).
+This project scales model-based feature selection techniques to very large datasets.
+It is co-developed with the [arrayloaders](https://github.com/laminlabs/arrayloaders) package.
+
+Here is a [quickstart](https://modlyn.lamin.ai/quickstart).
 
 ## Contributing
 
