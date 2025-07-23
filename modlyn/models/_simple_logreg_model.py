@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import lightning as L
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F
 from sklearn.metrics import classification_report, f1_score
@@ -40,6 +41,7 @@ class SimpleLogReg(L.LightningModule):
         super().__init__()
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+        self._adata = adata
         n_genes = adata.n_vars
         n_classes = adata.obs[label_column].nunique()
         self.label_column = label_column
@@ -144,6 +146,17 @@ class SimpleLogReg(L.LightningModule):
             max_steps=max_steps,
         )
         self.trainer.fit(model=self, datamodule=self.datamodule)
+
+    def get_weights(self) -> pd.DataFrame:
+        """Get the weights of the linear layer as a DataFrame."""
+        weights = self.linear.weight.detach().numpy()  # shape: (n_classes, n_genes)
+        df = pd.DataFrame(
+            weights,
+            columns=self._adata.var_names,
+            index=self.datamodule.label_encoder.classes_,
+        )
+        df.attrs["method_name"] = "modlyn_logreg"
+        return df
 
     def plot_losses(self, figsize=(15, 6)):
         """Plot training and validation losses over training steps."""
