@@ -21,6 +21,7 @@ def test(session):
 
 @nox.session()
 def docs(session):
+    run(session, "lamin init")  # shouldn't be necessary
     build_docs(session, strict=False)
     if not IS_PR:
         subprocess.run(
