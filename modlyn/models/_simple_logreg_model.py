@@ -23,8 +23,8 @@ class SimpleLogReg(L.LightningModule):
     Args:
         adata: An `AnnData` to infer dimensions from.
         label_column: Name of the column in `obs` that contains the target values.
-        learning_rate: Learning rate for the optimizer.
-        weight_decay: Weight decay for the optimizer.
+        learning_rate: Learning rate for the optimizer. Default is 1e-2.
+        weight_decay: Weight decay for the optimizer. Default is 0.333 to match sklearn's `LogisticRegression` default (C=1.0, weight_decay = 1.0 / (2.0 * C)).
 
     """
 
@@ -32,8 +32,8 @@ class SimpleLogReg(L.LightningModule):
         self,
         adata: ad.AnnData,
         label_column: str,
-        learning_rate: float = 1e-3,
-        weight_decay: float = 1e-4,
+        learning_rate: float = 1e-2,
+        weight_decay: float = 0.333,
     ):
         super().__init__()
         self.learning_rate = learning_rate
