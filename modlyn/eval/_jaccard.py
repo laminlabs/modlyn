@@ -6,7 +6,7 @@ import pandas as pd
 import seaborn as sns
 
 
-class CompareScoresJaccard:
+class CompareScores:
     """Class for comparing feature importance methods using Jaccard index."""
 
     def __init__(self, dataframes, n_top_values=None):
@@ -134,9 +134,9 @@ class CompareScoresJaccard:
                     )
 
         # Formatting
-        ax.set_xlabel("Number of selected top features (n_top)")
-        ax.set_ylabel("Jaccard index")
-        ax.set_title("Jaccard index measuring overlap of selected features")
+        ax.set_xlabel("Number of Top Features (n_top)")
+        ax.set_ylabel("Jaccard Index")
+        ax.set_title("Jaccard Index vs Top-N Features")
         ax.set_xticks(x + width * (n_pairs - 1) / 2)
         ax.set_xticklabels(n_top_values)
         ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
@@ -144,5 +144,30 @@ class CompareScoresJaccard:
         ax.set_ylim(0, None)
 
         plt.tight_layout()
-        plt.close()  # Close the figure to prevent automatic display
+
+    def plot_heatmaps(self):
+        """Plot heatmaps for all methods side by side."""
+        # Sort columns and index alphabetically for each dataframe
+        dfs_sorted = [df.sort_index().sort_index(axis=1) for df in self.dataframes]
+        method_names = [df.attrs["method_name"] for df in self.dataframes]
+
+        # Find global min and max across all dataframes
+        vmin = min(df.min().min() for df in dfs_sorted)
+        vmax = max(df.max().max() for df in dfs_sorted)
+
+        # Create subplots
+        n_methods = len(dfs_sorted)
+        fig, axes = plt.subplots(1, n_methods, figsize=(5 * n_methods, 6))
+
+        # Handle single method case
+        if n_methods == 1:
+            axes = [axes]
+
+        # Plot heatmaps
+        for i, (df, method_name) in enumerate(zip(dfs_sorted, method_names)):
+            sns.heatmap(df, ax=axes[i], cmap="viridis", vmin=vmin, vmax=vmax, cbar=True)
+            axes[i].set_title(method_name)
+
+        plt.tight_layout()
+        plt.close()
         return fig

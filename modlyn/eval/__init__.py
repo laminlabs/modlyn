@@ -3,7 +3,9 @@
 .. autosummary::
    :toctree: .
 
-   CompareScoresJaccard
+   CompareScores
 
 """
-from ._jaccard import CompareScoresJaccard
+from ._jaccard import CompareScores
+
+CompareScoresJaccard = CompareScores  # backward compat
