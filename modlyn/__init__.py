@@ -10,10 +10,10 @@ The package has two modules.
    :toctree: .
 
    models
-   evaluation
+   eval
 
 """
 
 __version__ = "0.0.5"  # denote a pre-release for 0.1.0 with 0.1rc1
 
-from . import evaluation, models
+from . import eval, models
