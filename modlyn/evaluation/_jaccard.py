@@ -134,9 +134,9 @@ class CompareScoresJaccard:
                     )
 
         # Formatting
-        ax.set_xlabel("Number of Top Features (n_top)")
-        ax.set_ylabel("Jaccard Index")
-        ax.set_title("Jaccard Index vs Top-N Features")
+        ax.set_xlabel("Number of selected top features (n_top)")
+        ax.set_ylabel("Jaccard index")
+        ax.set_title("Jaccard index measuring overlap of selected features")
         ax.set_xticks(x + width * (n_pairs - 1) / 2)
         ax.set_xticklabels(n_top_values)
         ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
