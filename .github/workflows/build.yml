@@ -43,7 +43,7 @@ jobs:
           aws-region: us-east-1
       - run: nox -s lint
       - run: nox -s test
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
       - run: nox -s docs
