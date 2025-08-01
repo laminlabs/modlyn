@@ -1,2 +1,0 @@
-epoch,step,train_MulticlassAccuracy,train_MulticlassF1Score,train_loss
-0,99,0.98095703125,0.9604730606079102,0.2252158373594284

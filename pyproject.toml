@@ -9,8 +9,15 @@ authors = [{name = "Lamin Labs", email = "open-source@lamin.ai"}]
 readme = "README.md"
 dynamic = ["version", "description"]
 dependencies = [
+    "numpy>=1.21.0",
+    "pandas>=1.3.0",
+    "scipy>=1.7.0",
+    "seaborn>=0.11.0",
+    "scanpy>=1.9.0",
+    "matplotlib-venn",
     "anndata>=0.12.0rc1",
-    "zarr>=3",
+    "scikit-learn",
+    "matplotlib",
     "lightning"
 ]
 
@@ -19,7 +26,9 @@ Home = "https://github.com/laminlabs/modlyn"
 
 [project.optional-dependencies]
 dev = [
-    "lamindb",
+    "lamindb[jupyter]",
+    "seaborn",
+    "scanpy",
     "pre-commit",
     "nox",
     "pytest>=6.0",

@@ -9,11 +9,11 @@ The package has two modules.
 .. autosummary::
    :toctree: .
 
-   io
    models
+   eval
 
 """
 
-__version__ = "0.0.2"  # denote a pre-release for 0.1.0 with 0.1rc1
+__version__ = "0.0.7"  # denote a pre-release for 0.1.0 with 0.1rc1
 
-from . import io, models
+from . import eval, models

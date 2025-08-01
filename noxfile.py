@@ -1,11 +1,11 @@
+import os
+import subprocess
+
 import nox
 from laminci.nox import build_docs, run, run_pre_commit, run_pytest
 
-# we'd like to aggregate coverage information across sessions
-# and for this the code needs to be located in the same
-# directory in every github action runner
-# this also allows to break out an installation section
 nox.options.default_venv_backend = "none"
+IS_PR = os.getenv("GITHUB_EVENT_NAME") != "push"
 
 
 @nox.session
@@ -21,4 +21,10 @@ def test(session):
 
 @nox.session()
 def docs(session):
+    run(session, "lamin init")  # shouldn't be necessary
     build_docs(session, strict=False)
+    if not IS_PR:
+        subprocess.run(
+            "lndocs --strip-prefix --format text --error-on-index",  # --strict back
+            shell=True,  # noqa: S602
+        )
