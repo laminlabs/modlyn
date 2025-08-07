@@ -25,6 +25,132 @@ class CompareScores:
         self.n_top_values = n_top_values
         self.results_df = None
 
+    def plot_weight_correlation(self, figsize=(10, 6)):
+        """Plot weight correlation between methods.
+
+        Creates a correlation plot showing how well different methods' weights
+        correlate across all features for each class/cell line.
+
+        Parameters:
+        -----------
+        figsize : tuple
+            Figure size (width, height)
+        """
+        if len(self.dataframes) < 2:
+            raise ValueError("Need at least 2 methods to compute correlations")
+
+        method_names = [df.attrs["method_name"] for df in self.dataframes]
+
+        # Find common features and samples
+        common_genes = set.intersection(*[set(df.columns) for df in self.dataframes])
+        common_cells = set.intersection(*[set(df.index) for df in self.dataframes])
+        common_genes, common_cells = sorted(common_genes), sorted(common_cells)
+
+        # Align dataframes
+        dfs_aligned = [df.loc[common_cells, common_genes] for df in self.dataframes]
+
+        # Compute correlations for each cell line and method pair
+        correlations = []
+        for cell_line in common_cells:
+            for method1, method2 in combinations(range(len(method_names)), 2):
+                weights1 = dfs_aligned[method1].loc[cell_line].values
+                weights2 = dfs_aligned[method2].loc[cell_line].values
+
+                # Calculate Pearson correlation
+                corr = np.corrcoef(weights1, weights2)[0, 1]
+
+                correlations.append(
+                    {
+                        "cell_line": cell_line,
+                        "method_pair": f"{method_names[method1]} vs {method_names[method2]}",
+                        "correlation": corr,
+                    }
+                )
+
+        corr_df = pd.DataFrame(correlations)
+
+        # Create the plot with 3 subplots to include the scatter plot
+        fig, axes = plt.subplots(1, 3, figsize=(figsize[0] * 1.5, figsize[1]))
+
+        # 1. Box plot of correlations by method pair (Left)
+        if len(corr_df["method_pair"].unique()) == 1:
+            # Single method pair - use histogram
+            axes[0].hist(corr_df["correlation"], bins=20, alpha=0.7, edgecolor="black")
+            axes[0].set_xlabel("Correlation")
+            axes[0].set_ylabel("Frequency")
+            axes[0].set_title("Weight Correlation Distribution")
+        else:
+            # Multiple method pairs - use box plot
+            sns.boxplot(data=corr_df, x="method_pair", y="correlation", ax=axes[0])
+            axes[0].set_xticklabels(axes[0].get_xticklabels(), rotation=45, ha="right")
+            axes[0].set_title("Weight Correlation by Method Pair")
+
+        axes[0].grid(True, alpha=0.3)
+
+        # 2. Weight Scatter Plot (Middle) - This matches your image!
+        if len(method_names) >= 2:
+            # Use first cell line for scatter plot demonstration
+            first_cell_line = common_cells[0]
+            weights1 = dfs_aligned[0].loc[first_cell_line].values
+            weights2 = dfs_aligned[1].loc[first_cell_line].values
+
+            # Create scatter plot
+            axes[1].scatter(weights1, weights2, alpha=0.6, s=20)
+
+            # Add correlation line (red dashed)
+            z = np.polyfit(weights1, weights2, 1)
+            p = np.poly1d(z)
+            axes[1].plot(weights1, p(weights1), "r--", alpha=0.8, linewidth=2)
+
+            # Calculate correlation for this cell line
+            cell_corr = np.corrcoef(weights1, weights2)[0, 1]
+
+            axes[1].set_xlabel(f"{method_names[0]} Weights")
+            axes[1].set_ylabel(f"{method_names[1]} Weights")
+            axes[1].set_title(
+                f"Weight Comparison: {first_cell_line}\nCorrelation: {cell_corr:.3f}"
+            )
+            axes[1].grid(True, alpha=0.3)
+
+        # 3. Correlation by cell line (Right)
+        if len(corr_df["method_pair"].unique()) == 1:
+            corr_by_line = (
+                corr_df.groupby("cell_line")["correlation"]
+                .mean()
+                .sort_values(ascending=True)
+            )
+            axes[2].barh(range(len(corr_by_line)), corr_by_line.values)
+            axes[2].set_yticks(range(len(corr_by_line)))
+            axes[2].set_yticklabels(corr_by_line.index)
+            axes[2].set_xlabel("Correlation")
+            axes[2].set_title("Correlation by Cell Line")
+            axes[2].grid(True, alpha=0.3)
+
+            # Add correlation value annotations
+            for i, v in enumerate(corr_by_line.values):
+                axes[2].text(v + 0.01, i, f"{v:.3f}", va="center", fontsize=9)
+        else:
+            # Multiple method pairs - show correlation matrix heatmap
+            pivot_corr = corr_df.pivot_table(
+                index="cell_line", columns="method_pair", values="correlation"
+            )
+            sns.heatmap(
+                pivot_corr, annot=True, fmt=".3f", cmap="RdBu_r", center=0, ax=axes[2]
+            )
+            axes[2].set_title("Correlation Matrix by Cell Line")
+
+        plt.tight_layout()
+
+        # Print summary statistics
+        overall_corr = corr_df["correlation"].mean()
+        print(f"Overall mean correlation: {overall_corr:.4f}")
+        print(
+            f"Correlation range: [{corr_df['correlation'].min():.4f}, {corr_df['correlation'].max():.4f}]"
+        )
+        print(f"Methods are {overall_corr*100:.1f}% correlated on average!")
+
+        return fig, corr_df
+
     def compute_jaccard_comparison(self):
         """Compute Jaccard comparison for n methods across different n_top values."""
         method_names = [df.attrs["method_name"] for df in self.dataframes]
