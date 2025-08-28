@@ -12,12 +12,9 @@ class CompareScores:
     def __init__(self, dataframes, n_top_values=None):
         """Initialize with dataframes and n_top values to compare.
 
-        Parameters:
-        -----------
-        dataframes : list of pd.DataFrame
-            List of dataframes with method results. Each should have df.attrs["method_name"]
-        n_top_values : list of int
-            List of top-N values to compare across
+        Args:
+            dataframes: List of dataframes with method results. Each should have df.attrs["method_name"]
+            n_top_values: List of top-N values to compare across
         """
         if n_top_values is None:
             n_top_values = [25, 50, 100, 200]
@@ -45,7 +42,7 @@ class CompareScores:
             for cell_line in common_cells:
                 scores = {
                     name: df.loc[cell_line]
-                    for df, name in zip(dfs_aligned, method_names)
+                    for df, name in zip(dfs_aligned, method_names, strict=False)
                 }
                 top_features = {
                     name: set(scores[name].abs().nlargest(n_top).index)
@@ -121,7 +118,7 @@ class CompareScores:
             )
 
             # Add value labels
-            for bar, value in zip(bars, values):
+            for bar, value in zip(bars, values, strict=False):
                 if not np.isnan(value):
                     ax.text(
                         bar.get_x() + bar.get_width() / 2,
@@ -164,7 +161,9 @@ class CompareScores:
             axes = [axes]
 
         # Plot heatmaps
-        for i, (df, method_name) in enumerate(zip(dfs_sorted, method_names)):
+        for i, (df, method_name) in enumerate(
+            zip(dfs_sorted, method_names, strict=False)
+        ):
             sns.heatmap(df, ax=axes[i], cmap="viridis", vmin=vmin, vmax=vmax, cbar=True)
             axes[i].set_title(method_name)
 

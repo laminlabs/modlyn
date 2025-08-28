@@ -15,8 +15,8 @@ class SimpleLogRegDataModule(L.LightningDataModule):
     """A simple LightningDataModule for classification tasks using TensorDataset.
 
     Args:
-        adata_train: anndata.AnnData object containing the training data.
-        adata_val: anndata.AnnData object containing the validation data.
+        adata_train: `AnnData` object containing the training data.
+        adata_val: `AnnData` object containing the validation data.
         label_column: Name of the column in `obs` that contains the target values.
         train_dataloader_kwargs: Additional keyword arguments passed to the torch DataLoader for the training dataset.
         val_dataloader_kwargs: Additional keyword arguments passed to the torch DataLoader for the validation dataset.
