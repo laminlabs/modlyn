@@ -129,10 +129,10 @@ lint.ignore = [
     "S607"
 ]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "docs/*" = ["I"]
 "tests/**/*.py" = [
     "D",  # docstrings are allowed to look a bit off
