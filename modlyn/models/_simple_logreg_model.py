@@ -26,7 +26,6 @@ class SimpleLogReg(L.LightningModule):
         label_column: Name of the column in `obs` that contains the target values.
         learning_rate: Learning rate for the optimizer.
         weight_decay: Weight decay for the optimizer.
-
     """
 
     def __init__(

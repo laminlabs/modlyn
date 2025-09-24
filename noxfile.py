@@ -26,5 +26,4 @@ def docs(session):
     if not IS_PR:
         subprocess.run(
             "lndocs --strip-prefix --format text --error-on-index",  # --strict back
-            shell=True,  # noqa: S602
         )
