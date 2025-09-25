@@ -24,6 +24,7 @@ def docs(session):
     run(session, "lamin init")  # shouldn't be necessary
     build_docs(session, strict=False)
     if not IS_PR:
-        subprocess.run(
+        subprocess.run(  # noqa: S602
             "lndocs --strip-prefix --format text --error-on-index",  # --strict back
+            shell=True,
         )
