@@ -12,6 +12,7 @@ dependencies = [
     "anndata>=0.12.0rc1",
     "scikit-learn",
     "matplotlib",
+    "arrayloaders",
     "lightning"
 ]
 
