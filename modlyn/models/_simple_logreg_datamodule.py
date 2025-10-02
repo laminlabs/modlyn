@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 import lightning as L
 import torch
-from arrayloaders.io.dask_loader import DaskDataset
 from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -82,8 +81,9 @@ class SimpleLogRegDataModule(L.LightningDataModule):
         self.n_chunks = n_chunks
         self.dask_scheduler = dask_scheduler
 
-        # Fit label encoder on training data (only needed for tensor datasets)
-        if self.dataset_type == "in-memory" and self.adata_train is not None:
+        # Fit label encoder on training data (used by both backends)
+        self.label_encoder = None
+        if self.adata_train is not None:
             self.label_encoder = LabelEncoder()
             self.label_encoder.fit(self.adata_train.obs[self.label_col])
 
@@ -107,6 +107,13 @@ class SimpleLogRegDataModule(L.LightningDataModule):
 
     def _create_dask_dataset(self, adata, shuffle=True):
         """Create a DaskDataset from AnnData."""
+        try:
+            from arrayloaders.io.dask_loader import DaskDataset  # lazy import
+        except Exception as e:
+            raise ImportError(
+                "arrayloaders is required for dataset_type='dask-arrayloader'. Install with `pip install arrayloaders`."
+            ) from e
+
         return DaskDataset(
             adata,
             label_column=self.label_col,
@@ -115,28 +122,76 @@ class SimpleLogRegDataModule(L.LightningDataModule):
             dask_scheduler=self.dask_scheduler,
         )
 
+    def _collate_dask_batch(self, batch):
+        """Collate function for DaskDataset batches -> (x_tensor, y_tensor)."""
+        import numpy as np
+        import torch
+        try:
+            import scipy.sparse as sp
+        except Exception:  # pragma: no cover - optional
+            sp = None
+
+        if not batch:
+            return torch.empty(0), torch.empty(0, dtype=torch.long)
+        first = batch[0]
+        if isinstance(first, tuple) and len(first) == 3:
+            xs, ys, _ = zip(*batch)
+        else:
+            xs, ys = zip(*batch)
+        if self.label_encoder is None:
+            raise RuntimeError("label_encoder not initialized")
+        y_enc = self.label_encoder.transform(list(ys))
+        # ensure each row is a contiguous 1D float32 array; handle sparse and object types
+        xs_arr = []
+        for x in xs:
+            # densify sparse rows
+            if sp is not None and getattr(sp, "issparse", None) and sp.issparse(x):
+                arr = x.toarray()
+            else:
+                arr = np.asarray(x)
+            # flatten any 2D shapes (e.g., 1 x n_vars)
+            if arr.ndim > 1:
+                arr = arr.ravel()
+            # robust dtype conversion
+            if arr.dtype == object:
+                # last-resort element-wise float coercion
+                try:
+                    arr = arr.astype(np.float32, copy=False)
+                except Exception:
+                    arr = np.array([float(v) for v in arr], dtype=np.float32)
+            else:
+                arr = arr.astype(np.float32, copy=False)
+            xs_arr.append(arr)
+        x_tensor = torch.as_tensor(np.stack(xs_arr, axis=0), dtype=torch.float32)
+        y_tensor = torch.as_tensor(y_enc, dtype=torch.long)
+        return x_tensor, y_tensor
+
     def train_dataloader(self):
         if self.adata_train is None:
             raise ValueError("adata_train is None")
 
+        kwargs = dict(self.train_dataloader_kwargs)
         if self.dataset_type == "in-memory":
             train_dataset = self._create_tensor_dataset(self.adata_train)
         elif self.dataset_type == "dask-arrayloader":
             train_dataset = self._create_dask_dataset(self.adata_train, shuffle=True)
+            kwargs.setdefault("collate_fn", self._collate_dask_batch)
         else:
             raise ValueError(f"Unknown dataset_type: {self.dataset_type}")
 
-        return DataLoader(train_dataset, **self.train_dataloader_kwargs)
+        return DataLoader(train_dataset, **kwargs)
 
     def val_dataloader(self):
         if self.adata_val is None:
-            return None
+            return []
 
+        kwargs = dict(self.val_dataloader_kwargs)
         if self.dataset_type == "in-memory":
             val_dataset = self._create_tensor_dataset(self.adata_val)
         elif self.dataset_type == "dask-arrayloader":
             val_dataset = self._create_dask_dataset(self.adata_val, shuffle=False)
+            kwargs.setdefault("collate_fn", self._collate_dask_batch)
         else:
             raise ValueError(f"Unknown dataset_type: {self.dataset_type}")
 
-        return DataLoader(val_dataset, **self.val_dataloader_kwargs)
+        return DataLoader(val_dataset, **kwargs)
