@@ -31,9 +31,10 @@ def test_dataset_type_alias_normalizes_and_trains():
     sys.modules["arrayloaders.io"] = fake_io
     sys.modules["arrayloaders.io.dask_loader"] = fake_dl
 
-    # Small synthetic dataset
-    X = np.random.rand(64, 8).astype("float32")
-    obs = pd.DataFrame({"cell_line": np.random.choice(["A", "B", "C"], size=64)})
+    # Small synthetic dataset (Generator API per NPY002)
+    rng = np.random.default_rng(0)
+    X = rng.random((64, 8)).astype("float32")
+    obs = pd.DataFrame({"cell_line": rng.choice(["A", "B", "C"], size=64)})
     adata = ad.AnnData(X=X, obs=obs)
 
     from modlyn.models import SimpleLogReg

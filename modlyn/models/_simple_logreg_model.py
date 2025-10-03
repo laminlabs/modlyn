@@ -129,6 +129,9 @@ class SimpleLogReg(L.LightningModule):
             adata_val: `AnnData` object containing the validation data.
             train_dataloader_kwargs: Additional keyword arguments passed to the torch DataLoader for the training dataset.
             val_dataloader_kwargs: Additional keyword arguments passed to the torch DataLoader for the validation dataset.
+            dataset_type: Backend to use: "in-memory" or "dask-arrayloader" (aliases accepted).
+            n_chunks: Number of dask chunks to combine per iteration (Dask backend only).
+            dask_scheduler: Dask scheduler to use, e.g., "threads" or "synchronous" (Dask backend only).
             max_epochs: Maximum number of epochs to train.
             log_every_n_steps: Log training metrics every n steps.
             num_sanity_val_steps: Number of sanity validation steps to run before training.
