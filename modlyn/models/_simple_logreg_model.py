@@ -113,6 +113,10 @@ class SimpleLogReg(L.LightningModule):
         adata_val: ad.AnnData | None,
         train_dataloader_kwargs=None,
         val_dataloader_kwargs=None,
+        # dataset backend configuration
+        dataset_type: str = "in-memory",
+        n_chunks: int = 8,
+        dask_scheduler: str = "threads",
         max_epochs: int = 4,
         log_every_n_steps: int = 1,
         num_sanity_val_steps: int = 0,
@@ -125,18 +129,35 @@ class SimpleLogReg(L.LightningModule):
             adata_val: `AnnData` object containing the validation data.
             train_dataloader_kwargs: Additional keyword arguments passed to the torch DataLoader for the training dataset.
             val_dataloader_kwargs: Additional keyword arguments passed to the torch DataLoader for the validation dataset.
+            dataset_type: Backend to use: "in-memory" or "dask-arrayloader" (aliases accepted).
+            n_chunks: Number of dask chunks to combine per iteration (Dask backend only).
+            dask_scheduler: Dask scheduler to use, e.g., "threads" or "synchronous" (Dask backend only).
             max_epochs: Maximum number of epochs to train.
             log_every_n_steps: Log training metrics every n steps.
             num_sanity_val_steps: Number of sanity validation steps to run before training.
             max_steps: Maximum number of training steps.
 
         """
+        # normalize dataset_type aliases (robust to common typos and synonyms)
+        normalized_dataset_type = {
+            "in_memory": "in-memory",
+            "in-memory": "in-memory",
+            "memory": "in-memory",
+            "dask": "dask-arrayloader",
+            "arrayloaders-dask": "dask-arrayloader",
+            "arrayloaders-dasd": "dask-arrayloader",  # common typo / requested alias
+            "dask-arrayloader": "dask-arrayloader",
+        }.get(dataset_type, dataset_type)
+
         self.datamodule = SimpleLogRegDataModule(
             adata_train=adata_train,
             adata_val=adata_val,
             label_column=self.label_column,
+            dataset_type=normalized_dataset_type,  # type: ignore[arg-type]
             train_dataloader_kwargs=train_dataloader_kwargs,
             val_dataloader_kwargs=val_dataloader_kwargs,
+            n_chunks=n_chunks,
+            dask_scheduler=dask_scheduler,  # type: ignore[arg-type]
         )
         self.trainer = L.Trainer(
             max_epochs=max_epochs,
@@ -149,10 +170,23 @@ class SimpleLogReg(L.LightningModule):
     def get_weights(self) -> pd.DataFrame:
         """Get the weights of the linear layer as a DataFrame."""
         weights = self.linear.weight.detach().numpy()  # shape: (n_classes, n_genes)
+        # Prefer label encoder classes if available, otherwise fall back to labels
+        try:
+            class_index = self.datamodule.label_encoder.classes_  # type: ignore[attr-defined]
+        except Exception:
+            labels = self._adata.obs[self.label_column]
+            if (
+                hasattr(labels, "cat")
+                and getattr(labels.dtype, "name", "") == "category"
+            ):
+                class_index = list(labels.cat.categories)
+            else:
+                class_index = list(pd.unique(labels))
+
         df = pd.DataFrame(
             weights,
             columns=self._adata.var_names,
-            index=self.datamodule.label_encoder.classes_,
+            index=class_index,
         )
         df.attrs["method_name"] = "modlyn_logreg"
         return df
