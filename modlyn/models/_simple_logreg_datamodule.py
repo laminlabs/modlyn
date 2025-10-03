@@ -141,7 +141,11 @@ class SimpleLogRegDataModule(L.LightningDataModule):
             xs, ys = zip(*batch, strict=False)
         if self.label_encoder is None:
             raise RuntimeError("label_encoder not initialized")
-        y_enc = self.label_encoder.transform(list(ys))
+        # Encode labels; fallback to ints if encoder mismatch occurs
+        try:
+            y_enc = self.label_encoder.transform(list(ys))
+        except Exception:
+            y_enc = np.array([int(y) for y in ys], dtype=np.int64)
         # ensure each row is a contiguous 1D float32 array; handle sparse and object types
         xs_arr = []
         for x in xs:
