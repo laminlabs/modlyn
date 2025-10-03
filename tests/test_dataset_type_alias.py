@@ -3,9 +3,9 @@ from __future__ import annotations
 import sys
 import types
 
+import anndata as ad
 import numpy as np
 import pandas as pd
-import anndata as ad
 import torch
 from torch.utils.data import IterableDataset
 
@@ -17,7 +17,14 @@ def test_dataset_type_alias_normalizes_and_trains():
     fake_dl = types.ModuleType("arrayloaders.io.dask_loader")
 
     class FakeDaskDataset(IterableDataset):
-        def __init__(self, adata, label_column: str, shuffle: bool, n_chunks: int, dask_scheduler: str):
+        def __init__(
+            self,
+            adata,
+            label_column: str,
+            shuffle: bool,
+            n_chunks: int,
+            dask_scheduler: str,
+        ):
             X = adata.X.toarray() if hasattr(adata.X, "toarray") else adata.X
             self.X = X.astype("float32")
             self.y = pd.Categorical(adata.obs[label_column]).codes.astype("int64")
@@ -54,4 +61,3 @@ def test_dataset_type_alias_normalizes_and_trains():
 
     assert model.datamodule is not None
     assert model.datamodule.dataset_type == "dask-arrayloader"
-

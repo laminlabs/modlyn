@@ -175,7 +175,10 @@ class SimpleLogReg(L.LightningModule):
             class_index = self.datamodule.label_encoder.classes_  # type: ignore[attr-defined]
         except Exception:
             labels = self._adata.obs[self.label_column]
-            if hasattr(labels, "cat") and getattr(labels.dtype, "name", "") == "category":
+            if (
+                hasattr(labels, "cat")
+                and getattr(labels.dtype, "name", "") == "category"
+            ):
                 class_index = list(labels.cat.categories)
             else:
                 class_index = list(pd.unique(labels))

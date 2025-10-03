@@ -126,6 +126,7 @@ class SimpleLogRegDataModule(L.LightningDataModule):
         """Collate function for DaskDataset batches -> (x_tensor, y_tensor)."""
         import numpy as np
         import torch
+
         try:
             import scipy.sparse as sp
         except Exception:  # pragma: no cover - optional
@@ -135,9 +136,9 @@ class SimpleLogRegDataModule(L.LightningDataModule):
             return torch.empty(0), torch.empty(0, dtype=torch.long)
         first = batch[0]
         if isinstance(first, tuple) and len(first) == 3:
-            xs, ys, _ = zip(*batch)
+            xs, ys, _ = zip(*batch, strict=False)
         else:
-            xs, ys = zip(*batch)
+            xs, ys = zip(*batch, strict=False)
         if self.label_encoder is None:
             raise RuntimeError("label_encoder not initialized")
         y_enc = self.label_encoder.transform(list(ys))
