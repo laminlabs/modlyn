@@ -1,8 +1,12 @@
-import os, pytest
+import os
+
+import pytest
+
 if os.environ.get("CI"):
     pytest.skip("Skip docs notebooks in CI", allow_module_level=True)
-    
+
 from pathlib import Path
+
 import nbproject_test as test
 
 
