@@ -111,3 +111,6 @@ docs/modlyn.*
 lamin_sphinx
 docs/conf.py
 _docs_tmp*
+
+docs/test-modlyn/
+lightning_logs/
