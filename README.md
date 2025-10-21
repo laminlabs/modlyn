@@ -10,7 +10,19 @@
 This project scales model-based feature selection techniques to very large datasets.
 It is co-developed with the [arrayloaders](https://github.com/laminlabs/arrayloaders) package.
 
-Here is a [quickstart](https://modlyn.lamin.ai/quickstart).
+## Features
+
+- **Multiple feature selection methods**: Simple logistic regression, ElasticNet, RandomForest, Mutual Information
+- **Scalable training**: Supports in-memory and Dask-backed datasets for large-scale data (100k+ cells)
+- **PyTorch Lightning integration**: GPU-ready, flexible training workflows
+- **Quantitative comparison**: Built-in tools to compare methods using Jaccard overlap and visualizations
+- **AnnData native**: Seamless integration with scanpy and the single-cell ecosystem
+
+## Quick Links
+
+- [Quickstart](https://modlyn.lamin.ai/quickstart): End-to-end example comparing multiple methods
+- [Benchmarks](https://modlyn.lamin.ai/benchmarks): Performance comparisons and recommendations
+- [API Reference](https://modlyn.lamin.ai/reference): Complete API documentation
 
 ## Contributing
 

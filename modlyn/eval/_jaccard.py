@@ -64,11 +64,15 @@ class CompareScores:
                     )
 
         # Add random baselines after all method pairs
+        # Correct expected Jaccard for two independent random k-subsets from m items:
+        # E[J] = k / (2m - k). See e.g., linearity of expectation with E[|A∩B|]=k^2/m and |A∪B|=2k-|A∩B|.
         for n_top in self.n_top_values:
             if n_top >= n_genes:
                 random_jaccard = 1.0
             else:
-                random_jaccard = (2 * n_top) / (2 * n_genes - n_top)
+                m = float(n_genes)
+                k = float(n_top)
+                random_jaccard = k / (2.0 * m - k)
 
             results.append(
                 {

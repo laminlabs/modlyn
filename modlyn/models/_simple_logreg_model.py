@@ -147,6 +147,7 @@ class SimpleLogReg(L.LightningModule):
             "arrayloaders-dask": "dask-arrayloader",
             "arrayloaders-dasd": "dask-arrayloader",  # common typo / requested alias
             "dask-arrayloader": "dask-arrayloader",
+            "annbatch": "annbatch",
         }.get(dataset_type, dataset_type)
 
         self.datamodule = SimpleLogRegDataModule(
