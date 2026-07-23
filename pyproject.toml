@@ -22,7 +22,8 @@ Home = "https://github.com/laminlabs/modlyn"
 dev = [
     "lamindb[jupyter]",
     "seaborn",
-    "scanpy",
+    "scanpy>=1.10; python_version >= '3.12'",
+    "scanpy; python_version < '3.12'",
     "pre-commit",
     "nox",
     "pytest>=6.0",
